@@ -272,19 +272,31 @@ class KuryrPortHandler(k8s_base.ResourceEventHandler):
 
         project_id = self._drv_project.get_project(pod)
         security_groups = self._drv_sg.get_security_groups(pod, project_id)
+        annotations = pod['metadata'].get('annotations')
+        if annotations.get('csk.pod.kuryrnetwork/name'):
+            drv_subnets = drivers.PodSubnetsDriver.get_instance(
+                specific_driver='annotation')
+        else:
+            drv_subnets = self._drv_subnets
         try:
-            subnets = self._drv_subnets.get_subnets(pod, project_id)
+            subnets = drv_subnets.get_subnets(pod, project_id)
         except (os_exc.ResourceNotFound, k_exc.K8sResourceNotFound):
             LOG.warning("Subnet does not exists. If namespace driver is "
                         "used, probably the namespace for the pod is "
                         "already deleted. So this pod does not need to "
                         "get a port as it will be deleted too. If the "
                         "default subnet driver is used, then you must "
-                        "select an existing subnet to be used by Kuryr.")
+                        "select an existing subnet to be used by Kuryr. "
+                        "If the annotation subnet driver is used, you "
+                        "must specify the pod annotation with"
+                        "csk.pod.kuryrnetwork/name.")
             self.k8s.add_event(pod, 'NoPodSubnetFound', 'Pod subnet not '
                                'found. Namespace for this pod was probably '
                                'deleted. For default subnet driver it must '
-                               'be existing subnet configured for Kuryr',
+                               'be existing subnet configured for Kuryr.'
+                               'For annotation subnet driver you must '
+                               'spcecify the csk.pod.kuryrnetwork/name'
+                               'annotation',
                                'Warning')
             return False
 

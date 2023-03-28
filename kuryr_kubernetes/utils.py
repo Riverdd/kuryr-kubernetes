@@ -298,13 +298,13 @@ def get_nodes_ips(node_subnets):
 
 
 @MEMOIZE
-def get_subnet(subnet_id):
+def get_subnet(subnet_id, fixedip=None):
     os_net = clients.get_network_client()
 
     n_subnet = os_net.get_subnet(subnet_id)
     n_network = os_net.get_network(n_subnet.network_id)
 
-    subnet = os_vif_util.neutron_to_osvif_subnet(n_subnet)
+    subnet = os_vif_util.neutron_to_osvif_subnet(n_subnet, fixedip)
     network = os_vif_util.neutron_to_osvif_network(n_network)
     network.subnets.objects.append(subnet)
     return network

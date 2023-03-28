@@ -66,10 +66,32 @@ class VIFHandler(k8s_base.ResourceEventHandler):
             return
 
         namespace = pod['metadata']['namespace']
-        kuryrnetwork_path = '{}/{}/kuryrnetworks/{}'.format(
-            constants.K8S_API_CRD_NAMESPACES, namespace,
-            namespace)
-        kuryrnetwork = driver_utils.get_k8s_resource(kuryrnetwork_path)
+        annotations = pod['metadata'].get('annotations')
+        if (CONF.kubernetes.pod_subnets_driver == 'annotation'):
+            kuryrnetwork_name = annotations.get('csk.pod.kuryrnetwork/name')
+            kuryrnetwork_path = '{}/{}/kuryrnetworks/{}'.format(
+                constants.K8S_API_CRD_NAMESPACES, namespace,
+                kuryrnetwork_name)
+            kuryrnetwork = driver_utils.get_k8s_resource(kuryrnetwork_path)
+            if not kuryrnetwork:
+                LOG.error("Pod %(podname)s in %(ns)s need specify annotation "
+                          "csk.pod.kuryrnetwork/name",
+                          {'podname': pod_name, 'ns': namespace})
+                return
+        elif (CONF.kubernetes.pod_subnets_driver == 'autoscheduler'):
+            kuryrnetwork_path = '{}/{}/kuryrnetworks'.format(
+                constants.K8S_API_CRD_NAMESPACES, namespace)
+            kuryrnetwork = driver_utils.get_k8s_resource(kuryrnetwork_path)
+            if not kuryrnetwork['items']:
+                LOG.error("Kuryrnetworks in %s need be created first",
+                           namespace)
+                return
+        else:
+            kuryrnetwork_path = '{}/{}/kuryrnetworks/{}'.format(
+                constants.K8S_API_CRD_NAMESPACES, namespace,
+                namespace)
+            kuryrnetwork = driver_utils.get_k8s_resource(kuryrnetwork_path)
+
         kuryrnetwork_status = kuryrnetwork.get('status', {})
         if (CONF.kubernetes.pod_subnets_driver == 'namespace' and
                 (not kuryrnetwork or not kuryrnetwork_status.get('routerId'))):

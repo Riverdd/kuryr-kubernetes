@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from oslo_config import cfg
 from oslo_log import log as logging
 
 from kuryr_kubernetes import clients
@@ -22,6 +23,7 @@ from kuryr_kubernetes.handlers import k8s_base
 from kuryr_kubernetes import utils
 
 
+CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
@@ -46,6 +48,14 @@ class NamespaceHandler(k8s_base.ResourceEventHandler):
         if not self._handle_namespace(ns_name):
             LOG.debug("Namespace %s has no Pods that should be handled. "
                       "Skipping event.", ns_name)
+            return
+
+        pod_subnet_driver = CONF.kubernetes.pod_subnets_driver
+        if (pod_subnet_driver == 'annotation' or 
+                pod_subnet_driver == 'autoscheduler'):
+            LOG.warning("Pod subnet driver with annotation or autoscheduler "
+                        "need create kuryrnetwork manually. Namespace %s",
+                         ns_name)
             return
 
         try:

@@ -66,7 +66,7 @@ def neutron_to_osvif_network(os_network):
     return obj
 
 
-def neutron_to_osvif_subnet(os_subnet):
+def neutron_to_osvif_subnet(os_subnet, fixedip):
     """Converts Neutron subnet to os-vif Subnet.
 
     :param os_subnet: openstack.network.v2.subnet.Subnet object
@@ -81,6 +81,9 @@ def neutron_to_osvif_subnet(os_subnet):
     if os_subnet.gateway_ip is not None:
         obj.gateway = os_subnet.gateway_ip
 
+    if fixedip:
+        obj.ips = osv_fixed_ip.FixedIPList(
+            objects=[osv_fixed_ip.FixedIP(address=fixedip)])
     return obj
 
 

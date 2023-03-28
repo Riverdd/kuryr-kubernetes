@@ -49,13 +49,34 @@ class NeutronPodVIFDriver(base.PodVIFDriver):
     def request_vif(self, pod, project_id, subnets, security_groups):
         os_net = clients.get_network_client()
 
-        rq = self._get_port_request(pod, project_id, subnets, security_groups)
-        port = os_net.create_port(**rq)
+        if isinstance(subnets, list):
+            for subnet in subnets:
+                try:
+                    rq = self._get_port_request(pod, project_id, subnet,
+                                                security_groups)
+                    port = os_net.create_port(**rq)
+                    break
+                except os_exc.ConflictException as e:
+                    subnet_id = list(subnet.keys())[0]
+                    if "No more IP addresses available on network" in e.details:
+                        LOG.warning('No more IP addresses available on '
+                                    'subnet %s', subnet_id)
+                        port = None
+                        continue
+            if not port:
+                namespace = pod['metadata']['namespace']
+                LOG.error('There is no more IP addresses available in '
+                           'namespace %s', namespace)
+                return
+        else:
+            subnet = subnets
+            rq = self._get_port_request(pod, project_id, subnet, security_groups)
+            port = os_net.create_port(**rq)
 
         self._check_port_binding([port])
         if not self._tag_on_creation:
             utils.tag_neutron_resources([port])
-        return ovu.neutron_to_osvif_vif(port.binding_vif_type, port, subnets)
+        return ovu.neutron_to_osvif_vif(port.binding_vif_type, port, subnet)
 
     def request_vifs(self, pod, project_id, subnets, security_groups,
                      num_ports, semaphore):

@@ -75,3 +75,4 @@ kuryr-cni
 
 # editor tags dir
 tags
+.DS_Store
