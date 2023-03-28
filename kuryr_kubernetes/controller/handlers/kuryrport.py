@@ -273,7 +273,7 @@ class KuryrPortHandler(k8s_base.ResourceEventHandler):
         project_id = self._drv_project.get_project(pod)
         security_groups = self._drv_sg.get_security_groups(pod, project_id)
         annotations = pod['metadata'].get('annotations')
-        if annotations.get('csk.pod.kuryrnetwork/name'):
+        if annotations and annotations.get('csk.pod.kuryrnetwork/name'):
             drv_subnets = drivers.PodSubnetsDriver.get_instance(
                 specific_driver='annotation')
         else:
